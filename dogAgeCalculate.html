@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐶 狗狗年齡計算機 (含儲存)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- CSS 部分 --- */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f4f7f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .calculator-container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+
+        .dog-image span {
+            font-size: 80px;
+            display: block;
+            margin-bottom: 20px;
+            color: #ff9800;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 300;
+        }
+
+        input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #ff9800;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            width: 100%;
+            font-weight: 700;
+        }
+
+        button:hover {
+            background-color: #e68900;
+        }
+
+        .result-box {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e3f2fd;
+            border-radius: 10px;
+            border-left: 5px solid #2196f3;
+            text-align: left;
+        }
+
+        .result-box p {
+            margin: 10px 0;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .highlight-dog {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #00796b;
+        }
+
+        .highlight-human {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #d32f2f;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .reference-note {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator-container">
+        <h1>🐶 狗狗年齡換算計算機</h1>
+        
+        <div class="dog-image">
+            <span role="img" aria-label="A friendly dog face">🐕</span>
+        </div>
+
+        <div class="input-group">
+            <label for="dog-dob">請輸入狗狗的出生年月日：</label>
+            <input type="date" id="dog-dob" required>
+        </div>
+        
+        <button id="calculate-btn">開始計算</button>
+
+        <div id="result-container" class="result-box hidden">
+            <p>現在大約 <span id="dog-age" class="highlight-dog">...</span> 歲的狗年齡</p>
+            <p>換算成人類年齡大約是 <span id="human-age" class="highlight-human">...</span> 歲</p>
+        </div>
+
+        <p class="reference-note">
+            *計算公式參考自科學文獻：$$A_{\text{human}} = 16 \ln(A_{\text{dog}}) + 31$$
+        </p>
+    </div>
+
+    <script>
+        // --- JavaScript 部分 ---
+        const calculateBtn = document.getElementById('calculate-btn');
+        const dobInput = document.getElementById('dog-dob');
+        const resultContainer = document.getElementById('result-container');
+        const dogAgeDisplay = document.getElementById('dog-age');
+        const humanAgeDisplay = document.getElementById('human-age');
+        
+        const DOG_DOB_STORAGE_KEY = 'dogDOB';
+        const DOG_AGE_STORAGE_KEY = 'dogAge';
+        const HUMAN_AGE_STORAGE_KEY = 'humanAge';
+
+        // 頁面載入時執行：檢查並載入上次的運算結果
+        window.addEventListener('load', loadLastResult);
+        calculateBtn.addEventListener('click', calculateDogAge);
+
+
+        function calculateDogAge() {
+            const dobValue = dobInput.value;
+
+            if (!dobValue) {
+                alert("請選擇狗狗的出生年月日！");
+                resultContainer.classList.add('hidden');
+                return;
+            }
+
+            const dob = new Date(dobValue);
+            const today = new Date();
+            
+            // 將今天的時間設為午夜，確保計算精確到日
+            today.setHours(0, 0, 0, 0); 
+            dob.setHours(0, 0, 0, 0); 
+
+            if (dob > today) {
+                alert("出生年月日不能晚於今天，請重新輸入！");
+                resultContainer.classList.add('hidden');
+                return;
+            }
+
+            // 計算狗狗的實際年齡（以年為單位，精確到小數）
+            const diffTime = Math.abs(today.getTime() - dob.getTime());
+            // 每年毫秒數：1000ms/s * 60s/min * 60min/hr * 24hr/day * 365.25 days/year
+            const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
+            const dogAgeYears = diffTime / msPerYear;
+
+            let humanAge;
+            let formattedDogAge;
+            let formattedHumanAge;
+
+            if (dogAgeYears < 0.001) { 
+                // 如果狗狗小於一天，年齡幾乎為零
+                humanAge = 0;
+                formattedDogAge = "0.0";
+            } else {
+                // 使用公式： A_human = 16 * ln(A_dog) + 31
+                humanAge = 16 * Math.log(dogAgeYears) + 31;
+                formattedDogAge = dogAgeYears.toFixed(1);
+            }
+            
+            // 顯示人類年齡（確保年齡不為負數，保留一位小數）
+            formattedHumanAge = Math.max(0, humanAge).toFixed(1);
+
+            // 4. 儲存結果到 localStorage
+            saveResult(dobValue, formattedDogAge, formattedHumanAge);
+
+            // 5. 顯示結果
+            displayResult(formattedDogAge, formattedHumanAge);
+        }
+
+        /**
+         * 儲存狗狗出生日期、計算出的狗狗年齡和人類年齡到 localStorage
+         * @param {string} dob - 狗狗出生日期 (YYYY-MM-DD)
+         * @param {string} dogAge - 格式
